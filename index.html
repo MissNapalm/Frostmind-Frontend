@@ -3,461 +3,353 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>FrostMind — Smart Refrigerator Dashboard</title>
+  <title>FridgeOS — Smart Refrigerator Dashboard (Mobile)</title>
+
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            ink: { 900:"#0B0C10",800:"#0F1117",700:"#12141D",600:"#141726",500:"#171A2B" },
-            accent: { violet:"#7C5CFF", green:"#39D98A", magenta:"#FF5470", amber:"#FBBF24" },
+            ink: { 900:"#0B0C10", 800:"#0F1117", 700:"#12141D", 600:"#141726", 500:"#171A2B" },
+            accent: { violet:"#7C5CFF", green:"#39D98A", magenta:"#FF5470", amber:"#FBBF24" }
           },
-          boxShadow: { glow:"0 10px 30px rgba(124,92,255,.25)", soft:"0 10px 25px rgba(0,0,0,.35)" },
-          borderRadius: { "2xl":"1.25rem" },
-        },
-      },
+          boxShadow: {
+            glow: "0 10px 30px rgba(124,92,255,.25)",
+            soft: "0 10px 25px rgba(0,0,0,.35)",
+          },
+          borderRadius: { "2xl": "1.25rem" }
+        }
+      }
     }
   </script>
-  <!-- Chart.js for realistic charts -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <style>
     html, body { height: 100%; }
     body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; }
     .glass { backdrop-filter: saturate(160%) blur(8px); -webkit-backdrop-filter: saturate(160%) blur(8px); }
-    .grid-auto-fill { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
 
-    /* --- Card styling (preserved) --- */
-    .os-card { position: relative; padding:1px; border-radius:1rem; transition: transform .25s ease, box-shadow .25s ease, filter .25s ease; }
+    /* Card styling */
+    .os-card { position: relative; padding: 1px; border-radius: 1rem; transition: transform .25s ease, filter .25s ease; }
     .os-card:hover { transform: translateY(-2px); filter: brightness(1.02); }
-    .os-card-inner { border-radius: inherit; background: rgba(20,23,38,.66); border:1px solid rgba(255,255,255,.08); padding:1rem; }
-    .os-card--fresh { background: linear-gradient(135deg, rgba(57,217,138,.35), rgba(34,197,94,.35)); box-shadow: 0 10px 30px rgba(57,217,138,.15); }
+    .os-card-inner { border-radius: inherit; background: rgba(20, 23, 38, .66); border: 1px solid rgba(255,255,255,.08); padding: 1rem; }
+    .os-card--fresh    { background: linear-gradient(135deg, rgba(57,217,138,.35), rgba(34,197,94,.35)); box-shadow: 0 10px 30px rgba(57,217,138,.15); }
     .os-card--expiring { background: linear-gradient(135deg, rgba(251,191,36,.35), rgba(245,158,11,.35)); box-shadow: 0 10px 30px rgba(251,191,36,.12); }
-    .os-card--expired { background: linear-gradient(135deg, rgba(255,84,112,.35), rgba(251,113,133,.35)); box-shadow: 0 10px 30px rgba(255,84,112,.12); }
-    .clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    .chip { font-size: 10px; line-height: 1; padding: .25rem .5rem; border-radius: .6rem; border: 1px solid rgba(255,255,255,.12); }
-    .temperature-display { background: linear-gradient(135deg, rgba(57,217,138,.15), rgba(34,197,94,.15)); border: 1px solid rgba(57,217,138,.3); }
+    .os-card--expired  { background: linear-gradient(135deg, rgba(255,84,112,.35), rgba(251,113,133,.35)); box-shadow: 0 10px 30px rgba(255,84,112,.12); }
 
-    /* Chart containers to ensure perfect fit */
-    .chart-card { height: 260px; overflow: hidden; }
-    .chart-card-tall { height: 300px; overflow: hidden; }
-    canvas { width: 100% !important; height: 100% !important; display: block; }
+    .chip { font-size: 10px; line-height: 1; padding: .25rem .5rem; border-radius: .6rem; border: 1px solid rgba(255,255,255,.12); }
+    .temperature-display { background: linear-gradient(135deg, rgba(124,92,255,.12), rgba(99,102,241,.10)); border: 1px solid rgba(124,92,255,.28); }
+
+    /* Mobile-first chart heights */
+    .chart-wrap { height: 220px; }
+    @media (min-width: 640px) { .chart-wrap { height: 260px; } }
   </style>
 </head>
+
 <body class="bg-ink-900 text-white antialiased">
   <!-- Background accents -->
   <div class="pointer-events-none fixed inset-0 -z-10">
-    <div class="absolute -top-20 -right-16 h-96 w-96 rounded-full bg-accent-violet/20 blur-3xl"></div>
-    <div class="absolute top-1/3 -left-16 h-80 w-80 rounded-full bg-accent-violet/10 blur-3xl"></div>
+    <div class="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-accent-violet/20 blur-3xl"></div>
+    <div class="absolute top-1/3 -left-24 h-72 w-72 rounded-full bg-accent-violet/10 blur-3xl"></div>
   </div>
 
-  <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div class="flex items-center gap-4">
-        <div class="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent-violet to-indigo-500 shadow-glow grid place-items-center">
-          <svg class="h-7 w-7 text-white drop-shadow" viewBox="0 0 24 24" fill="currentColor">
+  <!-- Header -->
+  <header class="max-w-screen-md mx-auto px-4 pt-5">
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-12 w-12 rounded-2xl bg-gradient-to-br from-accent-violet to-indigo-500 shadow-glow grid place-items-center">
+          <svg class="h-6 w-6 text-white drop-shadow" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM5 19V5h14v14H5z"/>
             <path d="M7 7h2v2H7zM7 10h2v2H7zM7 13h2v2H7zM10 7h7v2h-7zM10 10h7v2h-7zM10 13h7v2h-7z" class="opacity-70"/>
           </svg>
         </div>
-        <div>
-          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Frost<span class="text-accent-violet">Mind</span></h1>
-          <p class="text-sm text-white/70 mt-1">Smart refrigerator dashboard. Monitor temperature, track inventory, and manage food freshness.</p>
+        <div class="min-w-0">
+          <h1 class="text-xl font-extrabold tracking-tight leading-tight truncate">
+            Fridge<span class="text-accent-violet">OS</span> — Mobile Demo
+          </h1>
+          <p class="text-xs text-white/70 leading-tight truncate">Smart inventory • Energy-aware • Privacy-first</p>
         </div>
       </div>
-      <!-- CLEAR ONLINE INDICATOR -->
-      <div class="flex items-center gap-3">
-        <span class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm border bg-accent-green/10 border-accent-green/30 text-accent-green">
-          <span class="h-2.5 w-2.5 rounded-full bg-accent-green animate-pulse"></span> Online
-        </span>
-        <span class="hidden sm:inline text-xs text-white/60 bg-accent-violet/10 text-accent-violet rounded-full px-3 py-1.5 border border-accent-violet/20">Last sync: just now</span>
+
+      <!-- ONLINE badge -->
+      <div class="flex items-center gap-2 rounded-full px-3 py-1.5 border border-accent-violet/25 bg-accent-violet/10 text-accent-violet text-xs shrink-0">
+        <span class="h-2 w-2 rounded-full bg-accent-violet animate-pulse"></span>
+        Online
       </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <section class="grid lg:grid-cols-3 gap-6">
-      <!-- Left: Controls + Food Management -->
-      <div class="lg:col-span-2 space-y-6">
-        <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft overflow-hidden">
-          <div class="p-5 sm:p-6">
-            <!-- Temperature & Status -->
-            <div class="rounded-xl temperature-display p-4 mb-4">
-              <div class="grid md:grid-cols-3 gap-4">
-                <div class="flex items-center gap-3 min-w-0">
-                  <div class="h-12 w-12 rounded-xl bg-accent-green/20 grid place-items-center">
-                    <svg class="h-6 w-6 text-accent-green" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 18c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm8-8c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zM6 12c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2z"/>
-                    </svg>
-                  </div>
-                  <div class="min-w-0">
-                    <p class="font-semibold">Temperature</p>
-                    <p class="text-2xl font-bold text-accent-green truncate" id="currentTemp">38°F</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-3 min-w-0">
-                  <div class="h-12 w-12 rounded-xl bg-accent-violet/20 grid place-items-center">
-                    <svg class="h-6 w-6 text-accent-violet" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-                  </div>
-                  <div class="min-w-0">
-                    <p class="font-semibold">Energy Mode</p>
-                    <p class="text-sm text-white/80 truncate">Eco Cooling</p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-3 min-w-0">
-                  <div class="h-12 w-12 rounded-xl bg-accent-amber/20 grid place-items-center">
-                    <svg class="h-6 w-6 text-accent-amber" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                  </div>
-                  <div class="min-w-0">
-                    <p class="font-semibold">Status</p>
-                    <p class="text-sm text-accent-green truncate">System Online</p>
-                  </div>
-                </div>
+  <main class="max-w-screen-md mx-auto px-4 pb-8">
+    <!-- Temperature & Status -->
+    <section class="mt-4">
+      <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft">
+        <div class="p-4 sm:p-5">
+          <div class="rounded-xl temperature-display p-3">
+            <div class="grid grid-cols-3 gap-3">
+              <div class="flex flex-col items-center justify-center">
+                <p class="text-[11px] text-white/60">Fridge Temp</p>
+                <p id="currentTemp" class="text-2xl font-extrabold text-accent-green">38°F</p>
               </div>
-            </div>
-
-            <!-- Add Food Item -->
-            <div class="rounded-xl border border-white/10 bg-ink-700/50 p-4 mb-4">
-              <h3 class="font-semibold mb-3">Add Food Item</h3>
-              <div class="grid sm:grid-cols-4 gap-3">
-                <input id="foodName" class="rounded-lg border border-white/10 bg-ink-600 px-3 py-2 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-accent-violet/60" placeholder="Food name" />
-                <select id="foodCategory" class="rounded-lg border border-white/10 bg-ink-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-violet/60">
-                  <option value="dairy">Dairy</option>
-                  <option value="meat">Meat</option>
-                  <option value="produce">Produce</option>
-                  <option value="leftovers">Leftovers</option>
-                  <option value="beverages">Beverages</option>
-                  <option value="condiments">Condiments</option>
-                </select>
-                <input id="expiryDate" type="date" class="rounded-lg border border-white/10 bg-ink-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-violet/60" />
-                <button id="addFoodBtn" class="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-accent-violet to-indigo-500 px-4 py-2.5 font-semibold shadow-glow hover:brightness-105 transition">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                  Add
-                </button>
+              <div class="flex flex-col items-center justify-center">
+                <p class="text-[11px] text-white/60">Energy Mode</p>
+                <p class="text-sm font-semibold text-accent-violet">Eco Cooling</p>
               </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="grid sm:grid-cols-3 gap-3 mb-4">
-              <button id="loadDemoBtn" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-semibold hover:bg-white/10 transition">
-                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                Reload Demo Data
-              </button>
-              <button id="clearAllBtn" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-semibold hover:bg-white/10 transition">
-                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                Clear All
-              </button>
-              <button id="exportBtn" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-semibold hover:bg-white/10 transition">
-                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2v12m0 0l-3-3m3 3l3-3M4 15v2a4 4 0 004 4h8a4 4 0 004-4v-2"/></svg>
-                Export List
-              </button>
-            </div>
-
-            <!-- Stats -->
-            <div id="stats">
-              <div class="grid sm:grid-cols-5 gap-3">
-                <div class="rounded-xl border border-white/10 bg-ink-700/50 p-4 flex flex-col items-center justify-center">
-                  <p class="text-xs text-white/60 mb-2">Freshness</p>
-                  <div class="relative w-20 h-20">
-                    <svg class="w-full h-full" viewBox="0 0 120 120">
-                      <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12" />
-                      <circle id="freshnessRing" cx="60" cy="60" r="54" fill="none" stroke="url(#freshnessGradient)" stroke-width="12" stroke-dasharray="339.3" stroke-dashoffset="100" stroke-linecap="round" transform="rotate(-90 60 60)" />
-                      <defs>
-                        <linearGradient id="freshnessGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stop-color="#7C5CFF" />
-                          <stop offset="100%" stop-color="#39D98A" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <div class="absolute inset-0 flex flex-col items-center justify-center">
-                      <span id="freshnessPct" class="text-2xl font-extrabold">78</span>
-                      <span class="text-xs text-white/50 font-medium">%</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="rounded-xl border border-white/10 bg-ink-700/50 p-4">
-                  <p class="text-xs text-white/60">Total Items</p>
-                  <p id="statTotal" class="text-2xl font-extrabold mt-1">0</p>
-                </div>
-                <div class="rounded-xl border border-white/10 bg-ink-700/50 p-4">
-                  <p class="text-xs text-white/60">Fresh</p>
-                  <p id="statFresh" class="text-2xl font-extrabold mt-1 text-accent-green">0</p>
-                </div>
-                <div class="rounded-xl border border-white/10 bg-ink-700/50 p-4">
-                  <p class="text-xs text-white/60">Expiring Soon</p>
-                  <p id="statExpiring" class="text-2xl font-extrabold mt-1 text-accent-amber">0</p>
-                </div>
-                <div class="rounded-xl border border-white/10 bg-ink-700/50 p-4">
-                  <p class="text-xs text-white/60">Expired</p>
-                  <p id="statExpired" class="text-2xl font-extrabold mt-1 text-accent-magenta">0</p>
-                </div>
+              <div class="flex flex-col items-center justify-center">
+                <p class="text-[11px] text-white/60">Status</p>
+                <p class="text-sm font-semibold text-accent-green">All Systems OK</p>
               </div>
-            </div>
-
-            <!-- Realistic charts -->
-            <div class="mt-6 grid lg:grid-cols-2 gap-6">
-              <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft chart-card">
-                <div class="p-5 sm:p-6 h-full">
-                  <div class="flex items-center justify-between">
-                    <h2 class="text-lg font-bold">Temperature — Last 24h</h2>
-                    <div class="text-xs text-white/60">Fridge + Freezer</div>
-                  </div>
-                  <div class="h-[180px] sm:h-[200px]">
-                    <canvas id="tempChart"></canvas>
-                  </div>
-                </div>
-              </div>
-              <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft chart-card">
-                <div class="p-5 sm:p-6 h-full">
-                  <div class="flex items-center justify-between">
-                    <h2 class="text-lg font-bold">Door Opens — 24h</h2>
-                    <div class="text-xs text-white/60">Usage pattern</div>
-                  </div>
-                  <div class="h-[180px] sm:h-[200px]">
-                    <canvas id="doorChart"></canvas>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Food Inventory -->
-        <div class="grid lg:grid-cols-3 gap-6">
-          <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft overflow-hidden">
-            <div class="p-5 sm:p-6">
-              <div class="flex items-center justify-between gap-2">
-                <h2 class="text-lg font-bold text-accent-green">Fresh Items</h2>
-                <div class="text-xs text-white/60">Good to eat</div>
-              </div>
-              <div id="freshList" class="mt-4 space-y-3"></div>
             </div>
           </div>
-          <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft overflow-hidden">
-            <div class="p-5 sm:p-6">
-              <div class="flex items-center justify-between gap-2">
-                <h2 class="text-lg font-bold text-accent-amber">Expiring Soon</h2>
-                <div class="text-xs text-white/60">Use within 3 days</div>
-              </div>
-              <div id="expiringList" class="mt-4 space-y-3"></div>
+
+          <!-- Temperature Trend -->
+          <div class="mt-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold">Temperature (24h)</h3>
+              <div class="text-[11px] text-white/60">Target 37–40°F / Freezer -5–5°F</div>
             </div>
-          </div>
-          <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft overflow-hidden">
-            <div class="p-5 sm:p-6">
-              <div class="flex items-center justify-between gap-2">
-                <h2 class="text-lg font-bold text-accent-magenta">Expired</h2>
-                <div class="text-xs text-white/60">Should be discarded</div>
-              </div>
-              <div id="expiredList" class="mt-4 space-y-3"></div>
+            <div class="mt-2 chart-wrap">
+              <canvas id="tempChart"></canvas>
             </div>
           </div>
         </div>
       </div>
+    </section>
 
-      <!-- Right: System Info -->
-      <aside class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft overflow-hidden">
-        <div class="p-5 sm:p-6 space-y-4">
-          <div>
-            <h3 class="text-lg font-bold">System Overview</h3>
-            <p class="text-sm text-white/70 mt-1">Your smart refrigerator dashboard tracks inventory, temperature, and usage to reduce waste and energy costs.</p>
-          </div>
-          <div class="rounded-xl border border-white/10 bg-ink-700/50 p-4">
-            <h4 class="font-semibold">Temperature Control</h4>
-            <div class="mt-2 space-y-2">
-              <div class="flex justify-between text-sm">
-                <span>Status:</span>
-                <span class="inline-flex items-center gap-1.5 text-accent-green">
-                  <span class="h-2.5 w-2.5 rounded-full bg-accent-green"></span> Online
-                </span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span>Target:</span>
-                <span class="text-accent-green">37–40°F</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span>Current:</span>
-                <span class="text-accent-green" id="asideCurrentTemp">38°F</span>
-              </div>
-              <div class="flex justify-between text-sm">
-                <span>Humidity:</span>
-                <span class="text-white/70" id="asideHumidity">65%</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Inventory by Category Donut -->
-          <div class="rounded-xl border border-white/10 bg-ink-700/50 p-4 chart-card-tall">
-            <h4 class="font-semibold">Inventory by Category</h4>
-            <div class="h-[220px]">
-              <canvas id="categoryChart"></canvas>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-white/10 bg-ink-700/50 p-4">
-            <h4 class="font-semibold">Smart Features</h4>
-            <ul class="mt-2 space-y-1 text-sm text-white/70">
-              <li>• Auto-expiry tracking</li>
-              <li>• Energy optimization</li>
-              <li>• Shopping list generation</li>
-              <li>• Recipe suggestions</li>
-            </ul>
-          </div>
-          <div class="rounded-xl border border-white/10 bg-ink-700/50 p-4">
-            <h4 class="font-semibold">Recent Activity</h4>
-            <div class="mt-2 space-y-2 text-sm text-white/70" id="activityFeed">
-              <!-- populated on load -->
-            </div>
-          </div>
-          <div class="text-xs text-white/50">
-            <p>🌡️ Monitoring active • Door sensor: OK • Last maintenance: 2 days ago</p>
+    <!-- Quick Actions + Stats -->
+    <section class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft">
+        <div class="p-4 sm:p-5">
+          <h3 class="text-sm font-semibold mb-3">Quick Actions</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10 transition">Eco Mode</button>
+            <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10 transition">Quick Cool</button>
+            <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10 transition">Vacation</button>
+            <button class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold hover:bg-white/10 transition">Defrost</button>
           </div>
         </div>
-      </aside>
+      </div>
+
+      <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft">
+        <div class="p-4 sm:p-5">
+          <h3 class="text-sm font-semibold">Freshness</h3>
+          <div class="mt-3 grid grid-cols-3 gap-3 items-center">
+            <!-- Ring -->
+            <div class="col-span-1">
+              <div class="relative w-20 h-20 mx-auto">
+                <svg class="w-full h-full" viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="12" />
+                  <circle id="freshnessRing" cx="60" cy="60" r="54" fill="none" stroke="url(#freshnessGradient)" stroke-width="12" stroke-dasharray="339.3" stroke-dashoffset="100" stroke-linecap="round" transform="rotate(-90 60 60)" />
+                  <defs>
+                    <linearGradient id="freshnessGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#7C5CFF" />
+                      <stop offset="100%" stop-color="#39D98A" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span id="freshnessPct" class="text-xl font-extrabold">78</span>
+                  <span class="text-[11px] text-white/60 font-medium">%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Small stats -->
+            <div class="col-span-2 grid grid-cols-3 gap-2">
+              <div class="rounded-lg border border-white/10 bg-ink-700/50 p-2 text-center">
+                <p class="text-[11px] text-white/60">Total</p>
+                <p id="statTotal" class="text-lg font-extrabold">0</p>
+              </div>
+              <div class="rounded-lg border border-white/10 bg-ink-700/50 p-2 text-center">
+                <p class="text-[11px] text-white/60">Fresh</p>
+                <p id="statFresh" class="text-lg font-extrabold text-accent-green">0</p>
+              </div>
+              <div class="rounded-lg border border-white/10 bg-ink-700/50 p-2 text-center">
+                <p class="text-[11px] text-white/60">Expiring</p>
+                <p id="statExpiring" class="text-lg font-extrabold text-accent-amber">0</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Door activity -->
+          <div class="mt-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold">Door Activity (24h)</h3>
+              <span class="text-[11px] text-white/60">peaks = mealtimes</span>
+            </div>
+            <div class="mt-2 chart-wrap">
+              <canvas id="doorChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Add Item -->
+    <section class="mt-4">
+      <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft">
+        <div class="p-4 sm:p-5">
+          <h3 class="text-sm font-semibold mb-3">Add Food Item</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="foodName" class="col-span-2 rounded-lg border border-white/10 bg-ink-600 px-3 py-2 text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-accent-violet/60" placeholder="Food name" />
+            <select id="foodCategory" class="rounded-lg border border-white/10 bg-ink-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-violet/60">
+              <option value="dairy">Dairy</option>
+              <option value="meat">Meat</option>
+              <option value="produce">Produce</option>
+              <option value="leftovers">Leftovers</option>
+              <option value="beverages">Beverages</option>
+              <option value="condiments">Condiments</option>
+            </select>
+            <input id="expiryDate" type="date" class="rounded-lg border border-white/10 bg-ink-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-violet/60" />
+            <button id="addFoodBtn" class="col-span-2 rounded-lg bg-gradient-to-br from-accent-violet to-indigo-500 px-3 py-2.5 text-sm font-semibold shadow-glow hover:brightness-105 transition">
+              Add Item
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Inventory Lists -->
+    <section class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft">
+        <div class="p-4 sm:p-5">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-bold text-accent-green">Fresh Items</h2>
+            <div class="text-[11px] text-white/60">Good to eat</div>
+          </div>
+          <div id="freshList" class="mt-3 space-y-3"></div>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft">
+        <div class="p-4 sm:p-5">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-bold text-accent-amber">Expiring Soon</h2>
+            <div class="text-[11px] text-white/60">Use within 3 days</div>
+          </div>
+          <div id="expiringList" class="mt-3 space-y-3"></div>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl border border-white/10 bg-ink-800/60 shadow-soft sm:col-span-2">
+        <div class="p-4 sm:p-5">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-bold text-accent-magenta">Expired</h2>
+            <div class="text-[11px] text-white/60">Should be discarded</div>
+          </div>
+          <div id="expiredList" class="mt-3 space-y-3"></div>
+        </div>
+      </div>
     </section>
   </main>
 
-  <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
-    <div class="flex items-center justify-between text-xs text-white/50">
-      <span>© <span id="year"></span> FridgeOS — Smart Kitchen Technology</span>
-      <span>Design: Tailwind + tasteful gradients ✨</span>
+  <footer class="max-w-screen-md mx-auto px-4 pb-8">
+    <div class="flex items-center justify-between text-[11px] text-white/50">
+      <span>© <span id="year"></span> FridgeOS — Mobile Tech Demo</span>
+      <span>Purple UI • Local-first</span>
     </div>
   </footer>
 
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
 
+    /* ----------------------------
+       Fake Inventory + Rendering
+    -----------------------------*/
     const foodItems = [];
-    const currentTempEl = document.getElementById("currentTemp");
-    const asideCurrentTempEl = document.getElementById("asideCurrentTemp");
-    const asideHumidityEl = document.getElementById("asideHumidity");
 
     const foodNameEl = document.getElementById("foodName");
     const foodCategoryEl = document.getElementById("foodCategory");
     const expiryDateEl = document.getElementById("expiryDate");
     const addFoodBtn = document.getElementById("addFoodBtn");
-    const loadDemoBtn = document.getElementById("loadDemoBtn");
-    const clearAllBtn = document.getElementById("clearAllBtn");
-    const exportBtn = document.getElementById("exportBtn");
 
     const statTotal = document.getElementById("statTotal");
     const statFresh = document.getElementById("statFresh");
     const statExpiring = document.getElementById("statExpiring");
-    const statExpired = document.getElementById("statExpired");
 
     const freshList = document.getElementById("freshList");
     const expiringList = document.getElementById("expiringList");
     const expiredList = document.getElementById("expiredList");
 
-    // Default expiry date: +7 days
-    const defaultDate = new Date();
-    defaultDate.setDate(defaultDate.getDate() + 7);
+    const defaultDate = new Date(); defaultDate.setDate(defaultDate.getDate() + 7);
     expiryDateEl.value = defaultDate.toISOString().split('T')[0];
 
     addFoodBtn.addEventListener("click", () => {
       const name = (foodNameEl.value || "").trim();
       const category = foodCategoryEl.value;
       const expiryDate = expiryDateEl.value;
-      if (!name || !expiryDate) return alert("Please enter food name and expiry date");
-
-      const item = { id: Date.now(), name, category, expiryDate, addedDate: new Date().toISOString().split('T')[0] };
-      foodItems.push(item);
-      renderFoodItems(); updateCategoryChart();
-      addActivity(`Added “${name}”`);
-      foodNameEl.value = ""; expiryDateEl.value = defaultDate.toISOString().split('T')[0];
+      if (!name || !expiryDate) { alert("Please enter a food name and expiry date."); return; }
+      foodItems.push({ id: Date.now(), name, category, expiryDate, addedDate: todayISO() });
+      foodNameEl.value = "";
+      expiryDateEl.value = defaultDate.toISOString().split('T')[0];
+      renderFoodItems();
     });
 
-    loadDemoBtn.addEventListener("click", seedDemoData);
-    clearAllBtn.addEventListener("click", () => {
-      if (!confirm("Clear all food items?")) return;
-      foodItems.splice(0); renderFoodItems(); updateCategoryChart();
-      addActivity("Cleared all items");
-    });
+    function todayISO() { return new Date().toISOString().split('T')[0]; }
+    function getDateOffset(days) { const d = new Date(); d.setDate(d.getDate() + days); return d.toISOString().split('T')[0]; }
 
-    exportBtn.addEventListener("click", () => {
-      if (!foodItems.length) return alert("No items to export");
-      const csv = [
-        "Name,Category,Expiry Date,Added Date,Status",
-        ...foodItems.map(item => `${item.name},${item.category},${item.expiryDate},${item.addedDate},${getFoodStatus(item.expiryDate)}`)
-      ].join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob); const a = document.createElement("a");
-      a.href = url; a.download = "fridge_inventory.csv"; document.body.appendChild(a); a.click();
-      URL.revokeObjectURL(url); a.remove(); addActivity("Exported inventory CSV");
-    });
-
-    function removeItem(id) {
-      const idx = foodItems.findIndex(i => i.id === id);
-      if (idx < 0) return;
-      const name = foodItems[idx].name;
-      foodItems.splice(idx, 1); renderFoodItems(); updateCategoryChart();
-      addActivity(`Removed “${name}”`);
-    }
-    window.removeItem = removeItem;
-
-    function getDateOffset(days) {
-      const date = new Date(); date.setDate(date.getDate() + days);
-      return date.toISOString().split('T')[0];
-    }
-
-    function getFoodStatus(expiryDate) {
-      const today = new Date(); const expiry = new Date(expiryDate);
-      const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+    function foodStatus(expiryDate) {
+      const today = new Date(), exp = new Date(expiryDate);
+      const diffDays = Math.ceil((exp - today) / 86400000);
       if (diffDays < 0) return "expired";
       if (diffDays <= 3) return "expiring";
       return "fresh";
     }
 
-    function getCategoryIcon(category) {
-      const icons = { dairy:"🥛", meat:"🥩", produce:"🥬", leftovers:"🍽️", beverages:"🥤", condiments:"🧂" };
-      return icons[category] || "📦";
+    function removeItem(id) {
+      const idx = foodItems.findIndex(i => i.id === id);
+      if (idx >= 0) { foodItems.splice(idx, 1); renderFoodItems(); }
     }
 
     function renderFoodItems() {
-      const fresh = foodItems.filter(i => getFoodStatus(i.expiryDate) === "fresh");
-      const expiring = foodItems.filter(i => getFoodStatus(i.expiryDate) === "expiring");
-      const expired = foodItems.filter(i => getFoodStatus(i.expiryDate) === "expired");
+      const fresh    = foodItems.filter(i => foodStatus(i.expiryDate) === "fresh");
+      const expiring = foodItems.filter(i => foodStatus(i.expiryDate) === "expiring");
+      const expired  = foodItems.filter(i => foodStatus(i.expiryDate) === "expired");
 
-      statTotal.textContent = foodItems.length;
-      statFresh.textContent = fresh.length;
+      statTotal.textContent    = foodItems.length;
+      statFresh.textContent    = fresh.length;
       statExpiring.textContent = expiring.length;
-      statExpired.textContent = expired.length;
 
       updateFreshnessGraph(fresh.length, expiring.length, expired.length);
 
-      renderFoodList(fresh, freshList, "fresh");
-      renderFoodList(expiring, expiringList, "expiring");
-      renderFoodList(expired, expiredList, "expired");
+      renderList(fresh, freshList, "fresh");
+      renderList(expiring, expiringList, "expiring");
+      renderList(expired, expiredList, "expired");
     }
 
-    function renderFoodList(items, container, status) {
+    function renderList(items, container, status) {
       if (!items.length) { container.innerHTML = `<div class="text-sm text-white/50 border border-white/10 rounded-xl p-4">No items</div>`; return; }
       container.innerHTML = "";
-      items.forEach(item => {
+
+      for (const item of items) {
         const chipClass = status === "expired"
           ? "bg-accent-magenta/15 border-accent-magenta/40 text-accent-magenta"
           : status === "expiring"
           ? "bg-accent-amber/15 border-accent-amber/40 text-accent-amber"
           : "bg-accent-green/15 border-accent-green/35 text-accent-green";
 
-        const ringClass = status === "expired" ? "os-card os-card--expired"
-                        : status === "expiring" ? "os-card os-card--expiring" : "os-card os-card--fresh";
+        const ringClass = status === "expired"
+          ? "os-card os-card--expired"
+          : status === "expiring"
+          ? "os-card os-card--expiring"
+          : "os-card os-card--fresh";
 
-        const avatarGrad = status === "expired" ? "from-accent-magenta to-rose-500"
-                         : status === "expiring" ? "from-accent-amber to-orange-500" : "from-accent-green to-emerald-500";
+        const avatarGrad = status === "expired"
+          ? "from-accent-magenta to-rose-500"
+          : status === "expiring"
+          ? "from-accent-amber to-orange-500"
+          : "from-accent-green to-emerald-500";
 
-        const daysUntilExpiry = Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
-        const expiryText = daysUntilExpiry < 0 ? `${Math.abs(daysUntilExpiry)} days ago`
-                         : daysUntilExpiry === 0 ? "Today" : `${daysUntilExpiry} days`;
+        const days = Math.ceil((new Date(item.expiryDate) - new Date()) / 86400000);
+        const expiryText = days < 0 ? `${Math.abs(days)} days ago` : (days === 0 ? "Today" : `${days} days`);
 
         const card = document.createElement("div");
         card.className = ringClass;
@@ -466,237 +358,240 @@
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3 min-w-0">
                 <div class="h-10 w-10 rounded-xl bg-gradient-to-br ${avatarGrad} grid place-items-center text-white font-bold text-sm shrink-0">
-                  ${getCategoryIcon(item.category)}
+                  ${categoryIcon(item.category)}
                 </div>
                 <div class="min-w-0">
                   <h3 class="font-semibold leading-tight truncate">${escapeHtml(item.name)}</h3>
                   <p class="text-xs text-white/60 truncate">${item.category} • Expires: ${expiryText}</p>
                 </div>
               </div>
-              <div class="flex gap-2">
+              <div class="flex gap-2 items-center">
                 <span class="chip ${chipClass}">${status}</span>
-                <button class="text-white/40 hover:text-white/80 transition" onclick="removeItem(${item.id})" title="Remove">
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <button class="text-white/40 hover:text-white/80 transition" aria-label="Remove" onclick="(${removeItem.toString()})(${item.id})">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
                 </button>
               </div>
             </div>
-          </div>`;
+          </div>
+        `;
         container.appendChild(card);
-      });
+      }
+    }
+
+    function categoryIcon(category) {
+      const map = { dairy:"🥛", meat:"🥩", produce:"🥬", leftovers:"🍽️", beverages:"🥤", condiments:"🧂" };
+      return map[category] || "📦";
     }
 
     function escapeHtml(s) {
       return String(s)
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
     }
 
     function updateFreshnessGraph(freshCount, expiringCount, expiredCount) {
       const total = freshCount + expiringCount + expiredCount;
-      const freshnessRing = document.getElementById('freshnessRing');
-      const freshnessPct = document.getElementById('freshnessPct');
-      if (!total || !freshnessRing || !freshnessPct) return;
-      const freshness = Math.round((freshCount / total) * 100);
-      const circumference = 2 * Math.PI * 54;
-      const offset = circumference - (circumference * freshness / 100);
-      freshnessPct.textContent = freshness;
-      freshnessRing.style.strokeDasharray = circumference;
-      freshnessRing.style.strokeDashoffset = offset;
+      const pct = total ? Math.round((freshCount / total) * 100) : 0;
+      const ring = document.getElementById('freshnessRing');
+      const pctEl = document.getElementById('freshnessPct');
+      const C = 2 * Math.PI * 54;
+      ring.style.strokeDasharray = C;
+      ring.style.strokeDashoffset = C - (C * pct / 100);
+      pctEl.textContent = pct;
     }
 
-    // ---------- Charts ----------
+    /* ----------------------------
+       Charts (Temperature + Door)
+    -----------------------------*/
+    let tempChart, doorChart;
     const COLORS = {
-      violet: "#7C5CFF",
-      violetFill: "rgba(124,92,255,0.15)",
-      green: "#39D98A",
-      greenFill: "rgba(57,217,138,0.18)",
-      grid: "rgba(255,255,255,0.08)",
-      ticks: "rgba(255,255,255,0.7)"
+      violet: "#7C5CFF", violetFill: "rgba(124,92,255,0.16)",
+      green:  "#39D98A", greenFill:  "rgba(57,217,138,0.18)"
     };
-    let tempChart, doorChart, categoryChart;
+
+    const TEMP_BASE = { fridge: [], freezer: [], phases: [] };
+    const DOOR_BASE = { values: [], phases: [] };
 
     function chartBaseOptions() {
       return {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true,
+        maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
-        plugins: { legend: { labels: { color: COLORS.ticks, boxWidth: 10, boxHeight: 10 } } },
+        animation: false, /* we animate manually */
+        plugins: {
+          legend: { labels: { color: "rgba(255,255,255,0.8)", boxWidth: 10, boxHeight: 10 } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ctx.dataset.label + ": " + Math.round(ctx.parsed.y) + (ctx.dataset.label.includes("°F") ? "°F" : "")
+            }
+          }
+        },
         scales: {
-          x: { grid: { color: COLORS.grid }, ticks: { color: COLORS.ticks, maxRotation: 0, autoSkip: true } },
-          y: { grid: { color: COLORS.grid }, ticks: { color: COLORS.ticks } }
+          x: { grid: { color: "rgba(255,255,255,0.08)" }, ticks: { color: "rgba(255,255,255,0.8)", maxRotation: 0, autoSkip: true } },
+          y: { grid: { color: "rgba(255,255,255,0.08)" }, ticks: { color: "rgba(255,255,255,0.8)" } }
         }
       };
     }
 
-    function generateLabels24h() {
-      const labels = []; const now = new Date();
-      for (let i = 23; i >= 0; i--) {
-        const t = new Date(now.getTime() - i * 60 * 60 * 1000);
-        labels.push(t.toLocaleTimeString([], { hour: '2-digit' }));
-      }
-      return labels;
-    }
-
     function generateTempSeries() {
-      const labels = generateLabels24h();
-      const N = labels.length; const fridge = []; const freezer = [];
-      let f = 38, z = 0;
-      for (let i = 0; i < N; i++) {
-        const hour = (new Date().getHours() - (N - 1 - i) + 24) % 24;
-        const doorProb = (hour >= 7 && hour <= 9) || (hour >= 18 && hour <= 21) ? 0.35 : 0.12;
-        const doorSpike = Math.random() < doorProb ? (Math.random() * 3.5 + 1.0) : 0;
-
-        const pull = (f - 38) * 0.35;
-        f = f - pull + (doorSpike ? doorSpike : (Math.random() * 0.6 - 0.3));
-        f = Math.max(35, Math.min(42, f));
-
-        const zDoor = doorSpike ? doorSpike * 0.35 : 0;
-        const pullZ = (z - 0) * 0.40;
-        z = z - pullZ + (zDoor ? zDoor : (Math.random() * 0.6 - 0.3));
-        z = Math.max(-5, Math.min(5, z));
-
-        fridge.push(parseFloat(f.toFixed(1)));
-        freezer.push(parseFloat(z.toFixed(1)));
+      const labels = [];
+      const now = new Date();
+      for (let i = 23; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 3600000);
+        const hh = d.getHours().toString().padStart(2,"0");
+        labels.push(`${hh}:00`);
       }
+      const fridge = labels.map((_, i) => 38 + 0.8 * Math.sin(i * 0.26) + rnd(-0.5, 0.5));
+      const freezer = labels.map((_, i) => -2 + 1.2 * Math.sin(i * 0.22 + 0.7) + rnd(-0.6, 0.6));
       return { labels, fridge, freezer };
     }
 
     function generateDoorOpens24h() {
-      const labels = generateLabels24h(); const data = [];
-      for (let i = 0; i < labels.length; i++) {
-        const hour = (new Date().getHours() - (labels.length - 1 - i) + 24) % 24;
-        const base = (hour >= 7 && hour <= 9) || (hour >= 18 && hour <= 21) ? 5 : 2;
-        data.push(Math.max(0, Math.round(base + (Math.random() * 2 - 1))));
+      const labels = [];
+      const now = new Date();
+      for (let i = 23; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 3600000);
+        const hh = d.getHours().toString().padStart(2,"0");
+        labels.push(`${hh}:00`);
       }
+      const data = labels.map((_, i) => {
+        const hour = (new Date(now.getTime() - (23-i) * 3600000)).getHours();
+        let base = 1 + (hour >= 7 && hour <= 9 ? 3 : 0) + (hour >= 12 && hour <= 14 ? 2 : 0) + (hour >= 18 && hour <= 21 ? 3 : 0);
+        return Math.max(0, Math.round(base + rnd(-1, 1)));
+      });
       return { labels, data };
     }
 
     function createCharts() {
       const t = generateTempSeries();
-      const tempCtx = document.getElementById("tempChart").getContext("2d");
-      tempChart = new Chart(tempCtx, {
+      tempChart = new Chart(document.getElementById("tempChart").getContext("2d"), {
         type: "line",
         data: {
           labels: t.labels,
           datasets: [
-            { label: "Fridge (°F)", data: t.fridge, borderColor: COLORS.violet, backgroundColor: COLORS.violetFill, fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 },
-            { label: "Freezer (°F)", data: t.freezer, borderColor: COLORS.green, backgroundColor: COLORS.greenFill, fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2 }
+            { label: "Fridge (°F)",  data: t.fridge,  borderColor: COLORS.violet, backgroundColor: COLORS.violetFill, fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2.25 },
+            { label: "Freezer (°F)", data: t.freezer, borderColor: COLORS.green,  backgroundColor: COLORS.greenFill,  fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2.25 }
           ]
         },
-        options: { ...chartBaseOptions(), scales: { x: chartBaseOptions().scales.x, y: { ...chartBaseOptions().scales.y, suggestedMin: -10, suggestedMax: 45 } } }
+        options: { 
+          ...chartBaseOptions(),
+          scales: { 
+            x: chartBaseOptions().scales.x,
+            y: { ...chartBaseOptions().scales.y, suggestedMin: -10, suggestedMax: 45 }
+          }
+        }
       });
+      TEMP_BASE.fridge  = t.fridge.slice();
+      TEMP_BASE.freezer = t.freezer.slice();
+      TEMP_BASE.phases  = t.labels.map(() => Math.random() * Math.PI * 2);
 
       const d = generateDoorOpens24h();
-      const doorCtx = document.getElementById("doorChart").getContext("2d");
-      doorChart = new Chart(doorCtx, {
+      doorChart = new Chart(document.getElementById("doorChart").getContext("2d"), {
         type: "bar",
-        data: { labels: d.labels, datasets: [{ label: "Door Opens", data: d.data, borderColor: COLORS.violet, backgroundColor: COLORS.violetFill, borderWidth: 1 }] },
-        options: { ...chartBaseOptions(), scales: { x: { ...chartBaseOptions().scales.x }, y: { ...chartBaseOptions().scales.y, beginAtZero: true, suggestedMax: 8 } } }
-      });
-
-      const catCtx = document.getElementById("categoryChart").getContext("2d");
-      categoryChart = new Chart(catCtx, {
-        type: "doughnut",
-        data: {
-          labels: ["Dairy","Meat","Produce","Leftovers","Beverages","Condiments"],
-          datasets: [{
-            data: [0,0,0,0,0,0],
-            backgroundColor: [COLORS.violet, COLORS.green, "rgba(251,191,36,0.9)", "rgba(255,84,112,0.9)", "rgba(99,102,241,0.9)", "rgba(45,212,191,0.9)"],
-            borderColor: "rgba(255,255,255,0.08)", borderWidth: 1
-          }]
+        data: { 
+          labels: d.labels, 
+          datasets: [{ label: "Door Opens", data: d.data, borderColor: COLORS.violet, backgroundColor: COLORS.violetFill, borderWidth: 1 }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { color: COLORS.ticks } } } }
-      });
-      updateCategoryChart();
-    }
-
-    function updateCategoryChart() {
-      if (!categoryChart) return;
-      const counts = { dairy:0, meat:0, produce:0, leftovers:0, beverages:0, condiments:0 };
-      for (const i of foodItems) counts[i.category] = (counts[i.category] || 0) + 1;
-      categoryChart.data.datasets[0].data = [counts.dairy, counts.meat, counts.produce, counts.leftovers, counts.beverages, counts.condiments];
-      categoryChart.update();
-    }
-
-    function startLiveTelemetry() {
-      setInterval(() => {
-        if (!tempChart) return;
-        const lastF = tempChart.data.datasets[0].data.at(-1) ?? 38;
-        const lastZ = tempChart.data.datasets[1].data.at(-1) ?? 0;
-        const door = Math.random() < 0.18 ? (Math.random() * 2.5 + 0.5) : 0;
-        const nextF = clamp(35, 42, (lastF - (lastF - 38) * 0.35) + (door || (Math.random() * 0.6 - 0.3)));
-        const nextZ = clamp(-5, 5, (lastZ - (lastZ - 0) * 0.40) + ((door * 0.3) || (Math.random() * 0.6 - 0.3)));
-
-        tempChart.data.labels.push(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'}));
-        tempChart.data.datasets[0].data.push(parseFloat(nextF.toFixed(1)));
-        tempChart.data.datasets[1].data.push(parseFloat(nextZ.toFixed(1)));
-        if (tempChart.data.labels.length > 24) { tempChart.data.labels.shift(); tempChart.data.datasets.forEach(ds => ds.data.shift()); }
-        tempChart.update("none");
-
-        currentTempEl.textContent = `${nextF.toFixed(0)}°F`;
-        asideCurrentTempEl.textContent = currentTempEl.textContent;
-
-        const h = parseInt(asideHumidityEl.textContent) || 65;
-        const hn = clamp(55, 75, h + Math.round(Math.random()*4 - 2));
-        asideHumidityEl.textContent = `${hn}%`;
-
-        if (Math.random() < 0.18 && doorChart) {
-          const lastIdx = doorChart.data.labels.length - 1;
-          doorChart.data.datasets[0].data[lastIdx] = (doorChart.data.datasets[0].data[lastIdx] || 0) + 1;
-          doorChart.update("none");
+        options: { 
+          ...chartBaseOptions(),
+          scales: { 
+            x: chartBaseOptions().scales.x, 
+            y: { ...chartBaseOptions().scales.y, beginAtZero: true, suggestedMax: 8 } 
+          }
         }
-      }, 5000);
+      });
+      DOOR_BASE.values = d.data.slice();
+      DOOR_BASE.phases = d.labels.map(() => Math.random() * Math.PI * 2);
+    }
+
+    // Vertical "breathing" — no horizontal scrolling
+    function startVerticalWobble() {
+      const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduceMotion) return;
+
+      let t = 0;
+      let last = performance.now();
+      let throttle = 0;
+
+      const ampFridge  = 1.2; // °F
+      const ampFreezer = 1.6; // °F
+      const speed = 0.9;      // radians/second
+
+      function frame(now) {
+        const dt = (now - last) / 1000;
+        last = now;
+        throttle += dt;
+        t += speed * dt;
+
+        // Update at ~8fps for smooth/efficient motion
+        if (throttle >= 0.12) {
+          throttle = 0;
+
+          if (tempChart) {
+            const f = tempChart.data.datasets[0].data;
+            const z = tempChart.data.datasets[1].data;
+
+            for (let i = 0; i < f.length; i++) {
+              const phase = TEMP_BASE.phases[i];
+              const windowMod = 0.85 + 0.15 * Math.sin(i * 0.35);
+              f[i] = clamp(35, 42, TEMP_BASE.fridge[i]  + Math.sin(t + phase) * ampFridge  * windowMod);
+              z[i] = clamp(-5,  5, TEMP_BASE.freezer[i] + Math.sin(t*0.9 + phase) * ampFreezer * windowMod * 0.8);
+            }
+            tempChart.update('none');
+
+            const currentF = f[f.length - 1];
+            document.getElementById("currentTemp").textContent = `${Math.round(currentF)}°F`;
+          }
+
+          if (doorChart) {
+            const bars = doorChart.data.datasets[0].data;
+            for (let i = 0; i < bars.length; i++) {
+              const base = DOOR_BASE.values[i];
+              const phase = DOOR_BASE.phases[i];
+              bars[i] = Math.max(0, Math.round(base * (1 + 0.05 * Math.sin(t*0.6 + phase))));
+            }
+            doorChart.update('none');
+          }
+        }
+
+        if (document.visibilityState !== 'hidden') {
+          requestAnimationFrame(frame);
+        } else {
+          // pause until visible again
+          document.addEventListener('visibilitychange', () => {
+            last = performance.now();
+            requestAnimationFrame(frame);
+          }, { once: true });
+        }
+      }
+      requestAnimationFrame(frame);
     }
 
     function clamp(min, max, v){ return Math.max(min, Math.min(max, v)); }
+    function rnd(a,b){ return a + Math.random()*(b-a); }
 
-    // Activity feed helper
-    function addActivity(text) {
-      const feed = document.getElementById("activityFeed");
-      const p = document.createElement("p");
-      p.textContent = "• " + text;
-      p.className = "text-sm text-white/70";
-      feed.prepend(p);
-    }
-
-    // Seed demo data (pre-populated on load)
-    function seedDemoData() {
-      const demoItems = [
-        { id: 1, name: "Milk", category: "dairy", expiryDate: getDateOffset(2), addedDate: getDateOffset(-1) },
-        { id: 2, name: "Chicken Breast", category: "meat", expiryDate: getDateOffset(1), addedDate: getDateOffset(-3) },
-        { id: 3, name: "Lettuce", category: "produce", expiryDate: getDateOffset(5), addedDate: getDateOffset(-2) },
-        { id: 4, name: "Pizza Leftovers", category: "leftovers", expiryDate: getDateOffset(-1), addedDate: getDateOffset(-4) },
-        { id: 5, name: "Orange Juice", category: "beverages", expiryDate: getDateOffset(10), addedDate: getDateOffset(-1) },
-        { id: 6, name: "Yogurt", category: "dairy", expiryDate: getDateOffset(7), addedDate: getDateOffset(-2) },
-        { id: 7, name: "Bread", category: "produce", expiryDate: getDateOffset(3), addedDate: getDateOffset(-1) },
-        { id: 8, name: "Leftover Pasta", category: "leftovers", expiryDate: getDateOffset(-2), addedDate: getDateOffset(-5) },
-        { id: 9, name: "Spinach", category: "produce", expiryDate: getDateOffset(4), addedDate: getDateOffset(-1) },
-        { id: 10, name: "Butter", category: "dairy", expiryDate: getDateOffset(14), addedDate: getDateOffset(-7) },
-        { id: 11, name: "Soda", category: "beverages", expiryDate: getDateOffset(60), addedDate: getDateOffset(-2) },
-        { id: 12, name: "Mayo", category: "condiments", expiryDate: getDateOffset(90), addedDate: getDateOffset(-10) },
+    /* ----------------------------
+       Boot — populate with fake data
+    -----------------------------*/
+    document.addEventListener("DOMContentLoaded", () => {
+      // Fake inventory
+      const demo = [
+        { id: 1, name: "Milk",            category: "dairy",     expiryDate: getDateOffset(4),  addedDate: getDateOffset(-2) },
+        { id: 2, name: "Greek Yogurt",    category: "dairy",     expiryDate: getDateOffset(2),  addedDate: getDateOffset(-4) },
+        { id: 3, name: "Chicken Breast",  category: "meat",      expiryDate: getDateOffset(1),  addedDate: getDateOffset(-1) },
+        { id: 4, name: "Lettuce",         category: "produce",   expiryDate: getDateOffset(6),  addedDate: getDateOffset(-1) },
+        { id: 5, name: "Leftover Pasta",  category: "leftovers", expiryDate: getDateOffset(-1), addedDate: getDateOffset(-3) },
+        { id: 6, name: "Orange Juice",    category: "beverages", expiryDate: getDateOffset(9),  addedDate: getDateOffset(-2) },
+        { id: 7, name: "Ketchup",         category: "condiments",expiryDate: getDateOffset(30), addedDate: getDateOffset(-10) },
+        { id: 8, name: "Bread",           category: "produce",   expiryDate: getDateOffset(3),  addedDate: getDateOffset(-1) }
       ];
-      foodItems.splice(0, foodItems.length, ...demoItems);
-      renderFoodItems(); updateCategoryChart();
-      // Fill activity feed with believable events
-      const seedEvents = [
-        "Door opened 3× in last hour",
-        "Compressor cycle completed",
-        "Energy mode switched to Eco",
-        "New item detected: Milk",
-        "Defrost cycle scheduled for 03:00",
-      ];
-      seedEvents.forEach(e => addActivity(e));
-    }
+      foodItems.splice(0, foodItems.length, ...demo);
+      renderFoodItems();
 
-    // Initialize app (pre-populate for investor demo)
-    document.addEventListener('DOMContentLoaded', function() {
-      seedDemoData();
       createCharts();
-      startLiveTelemetry();
-      // Set initial temp/humidity to match charts
-      currentTempEl.textContent = "38°F";
-      asideCurrentTempEl.textContent = "38°F";
-      asideHumidityEl.textContent = "65%";
+      startVerticalWobble();
     });
   </script>
 </body>
